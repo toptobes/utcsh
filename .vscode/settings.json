@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "*.r": "c",
+        "assert.h": "c",
+        "util.h": "c",
+        "signal.h": "c",
+        "typeinfo": "cpp",
+        "stdlib.h": "c",
+        "stdio.h": "c",
+        "stdbool.h": "c",
+        "errno.h": "c"
+    }
+}

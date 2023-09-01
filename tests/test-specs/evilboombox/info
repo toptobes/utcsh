@@ -1,0 +1,6 @@
+{
+  "name": "Evil Boom Box",
+  "description": "Runs the test using EvilBoomBox, a library which causes syscalls and memory allocations to fail. Puts the shell through a number of standard activities (reading a file, writing a file, changing directories, changing paths, etc.). If you fail this test, check all your system calls and memory allocations to make sure you're handing potential error conditions.",
+  "rc": "nocrash",
+  "pointval": 1
+}
