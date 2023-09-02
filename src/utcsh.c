@@ -37,9 +37,7 @@ int main(int argc, char **argv)
     }
 
     printcmds(cmds, ncmds);
-
     eval(cmds, ncmds);
-
     destruct(cmds, ncmds);
   } while(fd == -1);
 
@@ -151,16 +149,13 @@ bool parse_command(char *cmdtxt, Command *cmd)
 
 void eval(Command *cmd, int ncmds)
 {
-  pid_t pids[(ncmds - 1) >= 1 ? (ncmds - 1) : 1];
-
   for (let i = 0; i < ncmds; i++)
   {
     let doInBackground = i < (ncmds - 1);
 
-    if (doInBackground) {
-      pids[i] = fork();
-
-      if (pids[i] == CHILD_PROCESS)
+    if (doInBackground) 
+    {
+      if (fork() == CHILD_PROCESS)
       {
         exec_single(cmd + i);
         exit(0);
@@ -181,7 +176,8 @@ void eval(Command *cmd, int ncmds)
 int original_stdout;
 
 __attribute__((constructor))
-void initialize() {
+void initialize() 
+{
   original_stdout = dup(STDOUT_FILENO);
 
   if (original_stdout == -1) {
@@ -201,8 +197,7 @@ void exec_single(Command *cmd)
         fd = redirectStdout(cmd->outputFile);
 
         if (fd == -1) {
-          scold_user("Error writing to file '%s'", cmd->outputFile);
-          return;
+          return scold_user("Error writing to file '%s'", cmd->outputFile);
         }
       }
 
