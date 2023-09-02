@@ -34,8 +34,7 @@ int is_absolute_path(char *path);
  * will cause the shell to fail all automated tests that cause this function to
  * be called, but may be useful for debugging.
  * */
-char *exe_exists_in_dir(const char *dirname, const char *filename,
-                        bool verbose);
+char *exe_exists_in_dir(const char *dirname, const char *filename, bool verbose);
 
 #define autofree __attribute__((cleanup(free_pointer)))
 void free_pointer(void *ptr);
@@ -43,14 +42,18 @@ void free_pointer(void *ptr);
 #define autoclose __attribute__((cleanup(close_fd)))
 void close_fd(int *fd);
 
+#define unused __attribute__((unused))
+
 #define let __auto_type
 
 int num_whitespaces(const char *str);
 
-#define scold_user(...) ({ int __fprintf_ret = fprintf(stderr, __VA_ARGS__); if (__fprintf_ret < 0) exit(2); });
-#define ppanic(e) ({ perror(e); exit(1); });
+#define scold_user(...) ({ int __fprintf_ret = fprintf(stderr, __VA_ARGS__); if (__fprintf_ret < 0) exit(2); })
+#define ppanic(e) ({ perror(e); exit(1); })
 
 enum { CHILD_PROCESS };
+
+extern bool in_debug_mode;
 
 void printcmds(Command *cmds, int ncmds);
 

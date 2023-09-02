@@ -67,7 +67,7 @@ static int fib(int n)
   return WEXITSTATUS(status1) + WEXITSTATUS(status2);
 }
 
-static void doFib(int n, __attribute__((unused)) int doPrint)
+static void doFib(int n, unused int doPrint)
 {
   printf("%d\n", fib(n));
 }

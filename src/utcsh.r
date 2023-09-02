@@ -9,27 +9,31 @@ typedef struct Command {
   char *outputFile;
 } Command;
 
-typedef void (*CommandFnImpl)();
+typedef void (*CommandFnImpl)(Command *cmd);
 
 typedef struct CommandFn {
   const char *name;
   CommandFnImpl execute;
 } CommandFn;
 
+int set_input_source(int argc, char **argv);
+
 Command *read_commands(int *ncmds);
 Command *parse_commands(char *cmdline, int *ncommands);
-void parse_command(char *segment, Command *cmd);
+bool parse_command(char *segment, Command *cmd);
 
 void eval(struct Command *cmd, int ncmds);
+void exec_single(Command *cmd);
 
-#define BUILTINS \
-  X(exit)        \
-  X(cd)          \
-  X(path)        \
+#define BUILTINS_X \
+  X(exit)          \
+  X(cd)            \
+  X(path)          \
+  X(toggledebug)   \
 
-#define X(name) void name##_fn(Command *cmd);
-  BUILTINS
-  X(extrnl)
+#define X(name) void name##_builtin(Command *cmd);
+  BUILTINS_X
+  X(external)
 #undef X
 
 extern CommandFn functions[];

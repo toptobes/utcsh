@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include "util.h"
 
-void handler(__attribute__((unused)) int signal)
+void handler(unused int signal)
 {
   write(STDOUT_FILENO, "Exiting\n", 8);
   exit(1);

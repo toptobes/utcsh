@@ -187,15 +187,19 @@ int num_whitespaces(const char *str)
   return count;
 }
 
+bool in_debug_mode = false;
+
 void printcmds(Command *cmds, int ncmds)
 {
+  if (!in_debug_mode) return;
+
   printf("Num commands: %d\n", ncmds);
 
   for (let i = 0; i < ncmds; i++)
   {
     let cmd = cmds + i;
 
-    for (int j = 0; j < cmd->argc + 1; j++)
+    for (let j = 0; j < cmd->argc + 1; j++)
     {
       printf("%s ", cmd->argv[j]);
     }

@@ -14,17 +14,43 @@ static char prompt[] = "utcsh> ";
 static char *default_shell_path[2] = { "/bin", NULL };
 
 CommandFn functions[] = {
-  #define X(name) {#name, name##_fn},
-    BUILTINS
-    { NULL, extrnl_fn },
+  #define X(name) { #name, name##_builtin },
+    BUILTINS_X
+    { NULL, external_builtin },
   #undef X
 };
 
 int main(int argc, char **argv)
 {
-  autoclose int fd = -1;
+  autoclose int fd = set_input_source(argc, argv);
+  set_shell_path(default_shell_path);
 
-  if (argc == 2) {
+  do {
+    if (fd == -1) {
+      printf("%s", prompt);
+    }
+
+    let ncmds = 0;
+    let cmds = read_commands(&ncmds);
+
+    if (!cmds) {
+      continue;
+    }
+
+    printcmds(cmds, ncmds);
+
+    eval(cmds, ncmds);
+  } while(fd == -1);
+
+  return 0;
+}
+
+int set_input_source(int argc, char **argv)
+{
+  int fd = -1;
+
+  if (argc == 2)
+  {
     fd = open(argv[1], O_RDONLY);
 
     if (fd == -1) {
@@ -36,32 +62,18 @@ int main(int argc, char **argv)
     }
   }
 
-  set_shell_path(default_shell_path);
-
-  do {
-    if (fd == -1) {
-      printf("%s", prompt);
-    }
-
-    let ncmds = 0;
-    let cmds = read_commands(&ncmds);
-
-    printcmds(cmds, ncmds);
-
-    eval(cmds, ncmds);
-  } while(fd == -1);
-
-  return 0;
+  return fd;
 }
 
-Command *read_commands(int *ncmds) {
+Command *read_commands(int *ncmds) 
+{
   size_t n = 0;
   autofree char *buffer = NULL;
 
   let nread = getline(&buffer, &n, stdin);
 
   if (nread == -1) {
-    exit_fn(0);
+    exit_builtin(0);
   }
 
   if (buffer[nread - 1] == '\n') {
@@ -73,39 +85,48 @@ Command *read_commands(int *ncmds) {
 
 Command *parse_commands(char *cmdline, int *ncmds) 
 {
-  char *saveptr1;
+  char *cmdtokstate;
 
   *ncmds = 1;
-
   for (size_t i = 0; i < strlen(cmdline); i++)
   {
     *ncmds += (cmdline[i] == '&');
   }
 
   Command *commands = calloc(*ncmds, sizeof(Command));
+  char *cmdtxt = strtok_r(cmdline, "&", &cmdtokstate);
 
-  char *segment = strtok_r(cmdline, "&", &saveptr1);
-
-  for (int i = 0; i < *ncmds; i++) 
+  for (let i = 0; i < *ncmds; i++) 
   {
-    parse_command(strdup(segment), commands + i);
-    segment = strtok_r(NULL, "&", &saveptr1);
+    if (!parse_command(strdup(cmdtxt), commands + i)) {
+      return NULL;
+    }
+    cmdtxt = strtok_r(NULL, "&", &cmdtokstate);
   }
 
   return commands;
 }
 
-void parse_command(char *segment, Command *cmd)
+bool parse_command(char *cmdtxt, Command *cmd)
 {
-  char *token = strtok(segment, " ");
+  let token = strtok(cmdtxt, " ");
+
   let nargs = 0;
+  let hasRedirect = false;
 
   while (token)
   {
-    if (strcmp(token, ">") == 0 ) 
+    if (strcmp(token, ">") == 0)
     {
+      if (hasRedirect)
+      {
+        scold_user("Single command can't have multiple redirects smh");
+        return false;
+      }
+
       token = strtok(NULL, " ");
       cmd->outputFile = strdup(token);
+      hasRedirect = true;
     } 
     else 
     {
@@ -120,15 +141,14 @@ void parse_command(char *segment, Command *cmd)
   cmd->argv[nargs] = NULL;
 
   cmd->argc = nargs - 1;
+  return true;
 }
-
-static void exec_single(Command *cmd);
 
 void eval(Command *cmd, int ncmds)
 {
   pid_t pids[ncmds - 1];
 
-  for (int i = 0; i < ncmds; i++)
+  for (let i = 0; i < ncmds; i++)
   {
     let doInBackground = i < (ncmds - 1);
 
@@ -146,13 +166,13 @@ void eval(Command *cmd, int ncmds)
     }
   }
 
-  for (int i = 0; i < ncmds - 1; i++)
+  for (let i = 0; i < ncmds - 1; i++)
   {
     waitpid(pids[i], NULL, 0);
   }
 }
 
-static void exec_single(Command *cmd)
+void exec_single(Command *cmd)
 {
   for (CommandFn *fn = functions; true; fn++)
   {
@@ -163,7 +183,7 @@ static void exec_single(Command *cmd)
   }
 }
 
-void exit_fn(Command *cmd)
+void exit_builtin(Command *cmd)
 {
   if (cmd->argc != 0) {
     return scold_user("'exit' doesn't take any arguments\n");
@@ -172,21 +192,30 @@ void exit_fn(Command *cmd)
   exit(0);
 }
 
-void cd_fn(Command *cmd) 
+void cd_builtin(Command *cmd) 
 {
   if (cmd->argc != 1) {
     return scold_user("'cd' requires one argument\n");
   }
 
-  __attribute__((unused)) int ret = chdir(cmd->argv[1]);
+  let ret = chdir(cmd->argv[1]);
+
+  if (ret == -1) {
+    scold_user("failed to change directories");
+  }
 }
 
-void path_fn(Command *cmd)
+void path_builtin(Command *cmd)
 {
   (void)cmd;
 }
 
-void extrnl_fn(Command *cmd)
+void toggledebug_builtin(unused Command *cmd)
+{
+  in_debug_mode = !in_debug_mode;
+}
+
+void external_builtin(Command *cmd)
 {
   let pid = fork();
 
