@@ -162,7 +162,8 @@ void eval(Command *cmd, int ncmds)
 
       if (pids[i] == CHILD_PROCESS)
       {
-        return exec_single(cmd + i);
+        exec_single(cmd + i);
+        exit(0);
       }
     }
     else
@@ -173,7 +174,7 @@ void eval(Command *cmd, int ncmds)
 
   for (let i = 0; i < ncmds - 1; i++)
   {
-    waitpid(pids[i], NULL, 0);
+    wait(NULL);
   }
 }
 
@@ -211,7 +212,7 @@ void exec_single(Command *cmd)
         unredirectStdout();
       }
 
-      break;
+      return;
     }
   }
 }
@@ -294,12 +295,13 @@ void external_builtin(Command *cmd)
     if (path == NULL) 
     {
       scold_user("Could not find executable '%s'", cmd->argv[0]);
-      return;
+      exit(1);
     }
 
     cmd->argv[0] = path;
     execv(cmd->argv[0], cmd->argv);
     perror("execv");
+    exit(1);
   }
   else
   {
