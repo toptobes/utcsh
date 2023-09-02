@@ -163,6 +163,32 @@ char *exe_exists_in_dir(const char *dirname, const char *filename, bool verbose)
   return NULL;
 }
 
+char* find_exe(char* name)
+{
+  char *full_path;
+  char cwd[256];
+
+  if (getcwd(cwd, sizeof cwd) == NULL) {
+    scold_user("cwd");
+    return NULL;
+  }
+
+  if ((full_path = exe_exists_in_dir(cwd, name, false))) {
+    return full_path;
+  }
+
+  for (let i = 0; i < MAX_ENTRIES_IN_SHELLPATH; i++)
+  {
+    let path = shell_paths[i];
+
+    if ((full_path = exe_exists_in_dir(path, name, false))) {
+      return full_path;
+    }
+  }
+
+  return NULL;
+}
+
 int num_whitespaces(const char *str)
 {
   int count = 0;

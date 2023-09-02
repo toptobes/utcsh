@@ -48,7 +48,7 @@ void close_fd(int *fd);
 
 int num_whitespaces(const char *str);
 
-#define scold_user(...) ({ int __fprintf_ret = fprintf(stderr, __VA_ARGS__); if (__fprintf_ret < 0) exit(2); })
+#define scold_user(fmt, ...) ({ int __fprintf_ret = fprintf(stderr, fmt "\n", ##__VA_ARGS__); if (__fprintf_ret < 0) exit(2); })
 #define ppanic(e) ({ perror(e); exit(1); })
 
 enum { CHILD_PROCESS };
@@ -56,5 +56,6 @@ enum { CHILD_PROCESS };
 extern bool in_debug_mode;
 
 void printcmds(Command *cmds, int ncmds);
+char* find_exe(char* name);
 
 #endif//UTILS
