@@ -22,8 +22,13 @@ Command *read_commands(int *ncmds);
 Command *parse_commands(char *cmdline, int *ncommands);
 bool parse_command(char *segment, Command *cmd);
 
+int redirectStdout(const char *outputFile);
+void unredirectStdout();
+
 void eval(struct Command *cmd, int ncmds);
 void exec_single(Command *cmd);
+
+void destruct(Command *cmds, int ncmds);
 
 #define BUILTINS_X \
   X(exit)          \
@@ -38,4 +43,4 @@ void exec_single(Command *cmd);
 
 extern CommandFn functions[];
 
-#endif// UTCSH_UTCSH_R
+#endif//UTCSH_UTCSH_R

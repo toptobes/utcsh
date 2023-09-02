@@ -40,6 +40,8 @@ int main(int argc, char **argv)
     printcmds(cmds, ncmds);
 
     eval(cmds, ncmds);
+
+    destruct(cmds, ncmds);
   } while(fd == -1);
 
   return 0;
@@ -98,7 +100,7 @@ Command *parse_commands(char *cmdline, int *ncmds)
 
   for (let i = 0; i < *ncmds; i++) 
   {
-    if (!parse_command(strdup(cmdtxt), commands + i)) {
+    if (!parse_command(cmdtxt, commands + i)) {
       return NULL;
     }
     cmdtxt = strtok_r(NULL, "&", &cmdtokstate);
@@ -146,7 +148,7 @@ bool parse_command(char *cmdtxt, Command *cmd)
 
 void eval(Command *cmd, int ncmds)
 {
-  pid_t pids[ncmds - 1];
+  pid_t pids[(ncmds - 1) >= 1 ? (ncmds - 1) : 1];
 
   for (let i = 0; i < ncmds; i++)
   {
@@ -172,15 +174,76 @@ void eval(Command *cmd, int ncmds)
   }
 }
 
+int original_stdout;
+
+__attribute__((constructor))
+void initialize() {
+  original_stdout = dup(STDOUT_FILENO);
+
+  if (original_stdout == -1) {
+    ppanic("Failed to duplicate stdout");
+  }
+}
+
 void exec_single(Command *cmd)
 {
   for (CommandFn *fn = functions; true; fn++)
   {
     if (fn->name == NULL || strcmp(*cmd->argv, fn->name) == 0)
     {
-      return fn->execute(cmd);
+      autoclose int fd = -1;
+
+      if (cmd->outputFile != NULL) {
+        fd = redirectStdout(cmd->outputFile);
+
+        if (fd == -1) {
+          scold_user("Error writing to file '%s'", cmd->outputFile);
+          return;
+        }
+      }
+
+      fn->execute(cmd);
+
+      if (fd != -1) {
+        unredirectStdout();
+      }
+
+      break;
     }
   }
+}
+
+int redirectStdout(const char *outputFile) 
+{
+    int fd = open(outputFile, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    if (fd == -1) {
+      ppanic("Failed to open file");
+    }
+    dup2(fd, STDOUT_FILENO);
+    return fd;
+}
+
+void unredirectStdout()
+{
+    dup2(original_stdout, STDOUT_FILENO);
+}
+
+void destruct(Command *cmds, int ncmds)
+{
+  for (let i = 0; i < ncmds; i++)
+  {
+    let cmd = cmds + i;
+
+    for (let j = 0; j < cmd->argc + 1; j++)
+    {
+      free(cmd->argv[j]);
+    }
+
+    free(cmd->argv);
+    free(cmd->outputFile);
+  }
+
+  free(cmds);
 }
 
 void exit_builtin(Command *cmd)
